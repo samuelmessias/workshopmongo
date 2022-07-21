@@ -1,0 +1,57 @@
+package com.samuelmessias.workshopmongo.services;
+
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.samuelmessias.workshopmongo.models.dto.PostDTO;
+import com.samuelmessias.workshopmongo.models.entities.Post;
+import com.samuelmessias.workshopmongo.repositories.PostRepository;
+import com.samuelmessias.workshopmongo.services.exception.ResourceNotFoundException;
+
+@Service
+public class PostService {
+	
+	@Autowired
+	private PostRepository repository;
+	
+	public PostDTO findByID(String id) {		
+		Post entity = getEntityById(id);
+		return new PostDTO(entity);
+	}
+	
+	@Transactional(readOnly = true)
+	private Post getEntityById(String id) {
+		Optional<Post> obj = repository.findById(id);
+		return  obj.orElseThrow(() -> new ResourceNotFoundException("Objeto não encontrado!"));		
+	}
+	
+	public List<PostDTO> findByTitle(String title){
+		 List<Post> list = repository.searchTitle(title);
+		 return list.stream().map(x -> new PostDTO(x)).collect(Collectors.toList());
+	}
+	
+	public List<PostDTO> fullSearch(String text, String start, String end) {
+		Instant startMoment = convertMoment(start, Instant.ofEpochMilli(0L));
+		Instant endMoment = convertMoment(end, Instant.now());
+		List<Post> list = repository.fullSearch(text, startMoment, endMoment);
+		return list.stream().map(x -> new PostDTO(x)).collect(Collectors.toList());
+	}
+	
+	private Instant convertMoment(String orignalText, Instant alternative) {
+		try {
+			return Instant.parse(orignalText);
+		}
+		catch (DateTimeParseException e) {
+			return alternative;
+		}
+	}
+	
+	
+}
